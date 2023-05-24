@@ -1,0 +1,147 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy
+from scipy import linalg as LA
+
+#Version of Trapezoidal Rule for Integration
+def trap3(f = None,a = None,b = None,N = None): 
+    summ = 0
+    step = (b - a) / N
+    avgg = (f[0] + f[-1]) / 2
+    for n in range(N-1):
+       summ = summ + f[n]  
+    T3 = step * (avgg + summ)
+    return T3
+    
+ #Version of Trapezoidal Rule for Integration
+def trap1(f = None,a = None,b = None,N = None): 
+    summ = 0
+    step = (b - a) / N
+    avgg = (f[0,0] + f[0,-1]) / 2
+    for n in range(N-1):
+        summ = summ + f[0,n]
+    T1 = step * (avgg + summ)
+    return T1
+    
+  #Computes Fourier Coefficients of W, The Connectivity Function
+def compute_wxi(f = None,n = None,N = None,a = None,b = None): 
+    #Our integrand is f(x)*cos(nx)
+    summ = 0
+    stepp = (b - a) / N
+    avgg = (f(b) * np.cos(n * b) + f(a) * np.cos(n * a)) / 2
+    for k in range(1,N):
+        xk = a + k * stepp
+        summ = summ + f(xk) * np.cos(n * xk)
+    T = stepp * (avgg + summ)
+    an = (1 / np.pi) * (T)
+    return an
+    
+   #Evaluates Fourier Series
+def evaluateFourier(x = None,Wi = None,Modes = None): 
+    summ = Wi[0,0]/2
+    for n in range(1,Modes):
+        summ = summ + Wi[0,n] * np.cos(n * x)
+        wx = summ
+    return wx
+    
+    #Computes RHS of 1D Neural Field Equation
+def neuralField_F(Ui = None,Wi = None,Modes = None,Beta = None,h = None): 
+    numPoints = 100
+    Fi = np.zeros((1,Modes))
+    S = lambda x = None: 1.0 / (1 + np.exp(np.multiply(- Beta,((x - h)))))
+    Integrand = np.zeros((1,numPoints))
+    thisIntegral=np.zeros((1,numPoints));
+    x_axis = np.linspace(- np.pi,np.pi,numPoints)
+    Sinput = np.zeros((1,numPoints))
+    Swinput = np.zeros((1,numPoints))
+    for i in range(Modes):
+        for k in range(numPoints):
+            x = x_axis[k]
+            thisEval = evaluateFourier(x,Ui,Modes)
+            thisSEval = S(thisEval)
+            Swinput[0,k] = thisSEval
+            Integrand[0,k] = np.multiply(np.cos(i * x),thisSEval)
+            thisIntegral[0,i] = trap1(Integrand,- np.pi,np.pi,numPoints)
+            Fi[0,i] = - Ui[0,i] + Wi[0,i] * thisIntegral[0,i]
+            F = Fi
+    return F
+    
+    
+    #Computes Frechet Derivative of RHS of 1D Neural Field
+def neuralfield_DF(Ui = None,Wi = None,Modes = None,Beta = None,h = None): 
+    numPoints = 100
+    Sprime = lambda x = None: np.multiply(Beta,np.exp(np.multiply(- Beta,(x - h)))) / (1 + np.exp(np.multiply(- Beta,((x - h))))) ** 2
+    x_axis = np.linspace(- np.pi,np.pi,numPoints)
+    DFi = np.zeros((Modes,Modes))
+    cos_Swinput = np.zeros((Modes,Modes,numPoints))
+    Sinput=np.zeros((numPoints,1));
+    Swinput=np.zeros((numPoints,1));
+    for i in np.arange(0,Modes):
+        for j in np.arange(0,Modes):
+            for k in np.arange(0,numPoints):
+                x = x_axis[k]
+                thisEval = evaluateFourier(x,Ui,Modes)
+                Sinput[k,0] = thisEval
+                thisSEval = Sprime(thisEval)
+                Swinput[k,0] = thisSEval
+                cos_Swinput[i,j,k] = (np.cos((i) * x)) * (np.cos((j) * x)) * Swinput[k]
+                cos_Swinput[i,0,k] = (np.cos((i) * x)) * Swinput[k]
+                cos_Swinput[i,i,k] = (np.cos((i) * x)) ** 2 * Swinput[k]
+                
+                thisEval1=np.squeeze(cos_Swinput[i,j,:]);
+                thisEval2=np.squeeze(cos_Swinput[i,0,:]);
+                thisEval3=np.squeeze(cos_Swinput[i,i,:]);
+
+                DFi[i,j] = Wi[0,i] * trap3(thisEval1,- np.pi,np.pi,numPoints)
+                DFi[i,0] = Wi[0,i] / 2 * trap3(thisEval2,- np.pi,np.pi,numPoints)
+                DFi[i,i] = - 1 + Wi[0,i] * trap3(thisEval3,- np.pi,np.pi,numPoints)
+                DFi[0,0] = - 1 + Wi[0,0] / 2 * trap3(Swinput,- np.pi,np.pi,numPoints)
+    DF = DFi
+    return DF
+    
+    ###############  Compute W(X) with Fourier Coefficients ##############################
+Modes = 8
+N = 10 ** 4
+#functions
+W = lambda x = None: (10.0 * np.exp(- 4.0 * x ** 2) - 6.0 * np.exp(- x ** 2))
+a1 = - np.pi
+b1 = np.pi
+
+#w0=(1./(pi)).*trap(W,a1,b1,N); #W_0
+Wi = np.zeros((1,Modes))
+
+for n in range(Modes):
+    Wi[0,n] = compute_wxi(W,n,N,a1,b1)
+
+numPoints = 100
+the_x1 = np.linspace(-np.pi,np.pi,numPoints)
+the_values1 = np.zeros((1,numPoints))
+the_fourierSeries1 = np.zeros((1,numPoints))
+for k in range(numPoints):
+    the_values1[0,k] = W(the_x1[k])
+    the_fourierSeries1[0,k] = evaluateFourier(the_x1[k],Wi,Modes)
+
+the_fourierSeries1=np.squeeze(the_fourierSeries1);
+the_values1=np.squeeze(the_values1);
+
+#Plot W from Fourier Series
+plt.plot(the_x1,the_fourierSeries1,'o')
+#Plot W from actual values
+plt.plot(the_x1,the_values1,'o')
+plt.show()
+
+Beta=20; #Parameter of Sigmoid S
+h = 1.0 / 3 #Parameter of Sigmoid S
+Ui = 2 * Wi #Initial Ui value
+#call Fi
+F = neuralField_F(Ui,Wi,Modes,Beta,h)
+
+#call DFi
+DF = neuralfield_DF(Ui,Wi,Modes,Beta,h)
+
+
+#call DFi
+DF = neuralfield_DF(Ui,Wi,Modes,Beta,h)
+
+plt.plot(the_x2,the_fourierSeries2,'o')
+plt.show()
