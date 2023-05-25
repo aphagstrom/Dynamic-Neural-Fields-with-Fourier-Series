@@ -1,3 +1,5 @@
+# This Code discretizes a 1D Dynamic Neural Field Equation with Fourier Series and plots an equilbrium solution. 
+
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy
@@ -144,4 +146,4 @@ DF = neuralfield_DF(Ui,Wi,Modes,Beta,h)
 DF = neuralfield_DF(Ui,Wi,Modes,Beta,h)
 
 plt.plot(the_x2,the_fourierSeries2,'o')
-plt.show()
+plt.show() #plots equilibrium solution of 1D neural field 
