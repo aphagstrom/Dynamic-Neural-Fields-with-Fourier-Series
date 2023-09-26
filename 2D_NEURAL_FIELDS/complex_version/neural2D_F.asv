@@ -1,0 +1,14 @@
+function F_test = neural2D_F(cmn,dmn,Beta,ll,h,hh,N,deltaX,deltaY,x,y,Modes,k,l,m,n)
+S=@(x) 1./(1+exp(-Beta.*((x-hh))));
+
+    
+for k=
+                thisEval(k,l) = evaluateFourierSeries(x(k),y(l),ll,h,dmn,Modes);
+                thisSEval(k,l) = S(thisEval(k,l));
+   
+                 Integral_1=compute_complex_coeff_version(thisSEval,N,deltaX,deltaY,x,y,a,b,c,d,m,n,ll,h);
+                 F_test=cmn(Modes+m+1,Modes+n+1)*Integral_1(Modes+m+1,Modes+n+1)-dmn(Modes+m+1,Modes+n+1);
+
+
+
+end
